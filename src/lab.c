@@ -4,6 +4,8 @@
 #include "lab.h"
 #include <readline/readline.h> 
 #include <readline/history.h>
+#include <pwd.h>
+#include <errno.h>
 
 #define VALID_OPTIONS "v"  // Defines the valid option(s) for getopt
 
@@ -23,17 +25,48 @@ char *get_prompt(const char *env) {
 }
 
 /**
- * Changes the current working directory of the shell. Uses the linux system
+ * @brief Changes the current working directory of the shell. Uses the linux system
  * call chdir. With no arguments the users home directory is used as the
  * directory to change to.
+ * 
+ * In the case where no directory is provided, the function will attempt to use to the user's home 
+ * directory. If the HOME environment variable is not set, the function will use the getuid() and 
+ * getpwuid() system calls to determine the home directory of the user. The getuid() function returns 
+ * the real user ID of the calling process, and the getpwuid() function searches the user database for 
+ * an entry with a matching uid.
+ * 
+ * References:
+ * https://man7.org/linux/man-pages/man2/getuid.2.html
+ * https://man7.org/linux/man-pages/man3/getpwuid.3p.html
  *
  * @param dir The directory to change to
  * @return  On success, zero is returned.  On error, -1 is returned, and
  * errno is set to indicate the error.
  */
 int change_dir(char **dir) {
-    // TODO
-    return -1;
+    const char *path = dir[0]; // target directory
+
+    // If no directory is provided, default to HOME
+    if (!path) {
+        path = getenv("HOME"); // try using HOME environment variable
+        /* If HOME is still null, fallback to the system calls getuid and getpwuid to find out the home directory of the user.*/
+        if (!path) {
+            struct passwd *user_info = getpwuid(getuid());
+            if (!user_info) {
+                fprintf(stderr, "cd: Could not determine home directory\n");
+                return -1;
+            }
+            path = user_info->pw_dir;
+        }
+    }
+
+    // Attempt to change directory
+    if (chdir(path) != 0) {
+        perror("cd");
+        return -1;
+    }
+
+    return 0;
 }
 
 /**
@@ -87,7 +120,27 @@ char *trim_white(char *line) {
  * @return True if the command was a built in command
  */
 bool do_builtin(struct shell *sh, char **argv) {
-    // TODO
+    // No arguments
+    if (!argv[0]) {
+        return false;
+    }
+    // Exit
+    if (strcmp(argv[0], "exit") == 0) {
+        sh_destroy(sh);
+        exit(EXIT_SUCCESS);
+    } 
+    // Change directory
+    if (strcmp(argv[0], "cd") == 0) {
+        // +1 below to skip argv[0], "cd", and provide only the directory argument, argv[1].
+        change_dir(argv+1);
+        return true;
+    }
+    // History
+    if (strcmp(argv[0], "history") == 0) {
+        print_history();
+        return true;
+    }
+
     return false;
 }
 
@@ -153,4 +206,11 @@ void parse_args(int argc, char **argv) {
                 abort(); // failsafe exit
         }
     }
+}
+
+/**
+ * @brief Prints the command history stored by the Readline library.
+ */
+void print_history() {
+    // TODO
 }
