@@ -14,11 +14,12 @@
  * malloc internally and the caller must free the resulting string.
  *
  * @param env The environment variable
- * @return const char* The prompt
+ * @return A dynamically allocated string containing the prompt or "shell>" if
+ * the environment variable is not set.
  */
 char *get_prompt(const char *env) {
-    // TODO
-    return NULL;
+    const char *prompt = getenv(env); // fetch the environment variable
+    return strdup(prompt ? prompt : "shell>");
 }
 
 /**
@@ -97,11 +98,16 @@ bool do_builtin(struct shell *sh, char **argv) {
  * in its own program group. Attaching a debugger will always cause
  * this function to fail because the debugger maintains control of
  * the subprocess it is debugging.
+ * 
+ * "MY_PROMPT" is the name of the environment variable we are using.
  *
  * @param sh
  */
 void sh_init(struct shell *sh) {
-    // TODO
+    sh->prompt = get_prompt("MY_PROMPT"); // set shell's prompt with env variable
+    if (!sh->prompt) {
+        sh->prompt = strdup("shell>"); // default if env variable is not set
+    }
 }
 
 /**
@@ -111,7 +117,7 @@ void sh_init(struct shell *sh) {
  * @param sh
  */
 void sh_destroy(struct shell *sh) {
-    // TODO
+    free(sh->prompt); // free the prompt
 }
 
 /**
