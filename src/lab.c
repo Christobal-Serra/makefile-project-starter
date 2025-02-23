@@ -216,6 +216,9 @@ void parse_args(int argc, char **argv) {
  * 
  * Blank lines are not saved in the history, so they will not be printed by this function. If there are 
  * blank lines, they are handled in main.c.
+ * 
+ * Reference:
+ * https://tiswww.cwru.edu/php/chet/readline/history.html
  */
 void print_history() {
     // Collect history entries.
