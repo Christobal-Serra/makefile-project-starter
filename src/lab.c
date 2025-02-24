@@ -6,6 +6,7 @@
 #include <readline/history.h>
 #include <pwd.h>
 #include <errno.h>
+#include <ctype.h>
 
 #define VALID_OPTIONS "v"  // Defines the valid option(s) for getopt
 
@@ -80,8 +81,39 @@ int change_dir(char **dir) {
  * @return The line read in a format suitable for exec
  */
 char **cmd_parse(const char *line) {
-    // TODO
-    return NULL;
+    if (!line) { // null line
+        return NULL;
+    }
+
+    long arg_max = sysconf(_SC_ARG_MAX);
+    char **args = malloc(arg_max * sizeof(char*)); // TODO: Experiment with calloc?
+    if (!args) { // calloc failure
+        perror("cmd_parse: malloc failed");
+        return NULL;
+    }
+    // Set array pointers to null
+    for (long i = 0; i < arg_max; i++) {
+        args[i] = NULL;
+    }    
+    // Save a mutable copy of the line. 
+    char *line_copy = strdup(line);
+    if (!line_copy) {
+        perror("cmd_parse: strdup failed");
+        free(args);
+        return NULL;
+    }
+    // Parse tokens into args array. Continue while tokens remain and we haven't reached arg_max limit.
+    size_t index = 0; // array index and counter, tracking number of args parsed.
+    char *current_token = strtok(line_copy, " \t"); // tokenize by spaces and tabs
+    while ( current_token && (index < (size_t)(arg_max-1)) ) {
+        // Copy the current token into the args array and move to the next token.
+        args[index++] = strdup(current_token);
+        current_token = strtok(NULL, " \t");
+    }
+    // Clean-up and return.
+    args[index] = NULL;
+    free(line_copy);
+    return args;
 }
 
 /**
@@ -90,7 +122,14 @@ char **cmd_parse(const char *line) {
  * @param line the line to free
  */
 void cmd_free(char **line) {
-    // TODO
+    if (!line) { // null line
+        return;
+    }
+    // Free each argument string allocated by strdup in cmd_parse.
+    for (size_t i = 0; line[i]; i++) {
+        free(line[i]);
+    }
+    free(line);
 }
 
 /**
@@ -103,7 +142,27 @@ void cmd_free(char **line) {
  * @return The new line with no whitespace
  */
 char *trim_white(char *line) {
-    // TODO
+    if (!line) { // null line
+        return NULL;
+    }
+    char *end; // pointer to the end of the line, before null terminator
+
+    // Use ctype library to trim through leading white spaces.
+    while (isspace((unsigned char)*line)) {
+         line++;
+    }
+    // If the whole line was whitespace, then current character is null terminator. Exit. 
+    if (*line == '\0') {
+        return line;
+    }
+
+    // Trim trailing whitespace.
+    end = line + strlen(line)-1; // update end index to the last character of the line
+    while ( (end > line) && isspace((unsigned char)*end) ) {
+        end--; // isspace will trim; end will point to the last non-whitespace character
+    }
+    // Tack on a new null terminator and return the fixed line.
+    *(end+1) = '\0';
     return line;
 }
 
