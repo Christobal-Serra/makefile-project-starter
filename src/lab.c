@@ -72,6 +72,25 @@ int change_dir(char **dir) {
 }
 
 /**
+ * @brief Helper function to free allocated memory on strdup failure.
+ *
+ * @param args array of allocated strings.
+ * @param count Number of strings.
+ * @param line_copy duplicated input line.
+ * @return NULL, so that we can return NULL in the calling function.
+ */
+static char **strdup_failure(char **args, size_t count, char *line_copy) {
+    perror("cmd_parse: strdup failed");
+    // Free each argument string allocated by strdup in cmd_parse.
+    for (size_t i = 0; i < count; i++) {
+        free(args[i]);
+    }
+    free(args);
+    free(line_copy);
+    return NULL;
+}
+
+/**
  * @brief Convert line read from the user into to format that will work with
  * execvp. We limit the number of arguments to ARG_MAX loaded from sysconf.
  * This function allocates memory that must be reclaimed with the cmd_free
@@ -109,6 +128,9 @@ char **cmd_parse(const char *line) {
     while ( current_token && (index < (size_t)(arg_max-1)) ) {
         // Copy the current token into the args array and move to the next token.
         args[index++] = strdup(current_token);
+        if (!args[index]) { // strdup failed
+            return strdup_failure(args, index, line_copy);
+        }
         current_token = strtok(NULL, " \t");
     }
     // Clean-up and return.
@@ -213,7 +235,7 @@ bool do_builtin(struct shell *sh, char **argv) {
  * Assigns the shell its own process group, sets that group as the foreground process group 
  * of the terminal, allowing the shell to directly receive input signals from the user.
  * 
- * @param sh Pointer to the shell structure to initialize.
+ * @param sh Pointer to the shell structure.
  */
 static void setup_process_group(struct shell *sh) {
     // Assign shell's process group ID (PGID) to its personal PID.
