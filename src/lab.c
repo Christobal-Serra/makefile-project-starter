@@ -7,6 +7,7 @@
 #include <pwd.h>
 #include <errno.h>
 #include <ctype.h>
+#include <signal.h>
 
 #define VALID_OPTIONS "v"  // Defines the valid option(s) for getopt
 
@@ -203,6 +204,38 @@ bool do_builtin(struct shell *sh, char **argv) {
     return false;
 }
 
+#include <signal.h>
+#include <unistd.h>
+
+/**
+ * @brief Helper function to set up the shell's own process group and control the terminal.
+ * 
+ * Assigns the shell its own process group, sets that group as the foreground process group 
+ * of the terminal, allowing the shell to directly receive input signals from the user.
+ * 
+ * @param sh Pointer to the shell structure to initialize.
+ */
+static void setup_process_group(struct shell *sh) {
+    // Assign shell's process group ID (PGID) to its personal PID.
+    sh->shell_pgid = getpid();
+    setpgid(sh->shell_pgid, sh->shell_pgid);
+    // Assign shell as the terminal's foreground process group.
+    tcsetpgrp(sh->shell_terminal, sh->shell_pgid);
+}
+
+/**
+ * @brief Helper function to set signals to be ignored by the shell.
+ * 
+ * The signals ignored prevent the it from being interrupted by standard keyboard shortcuts.
+ */
+static void setup_signal_handling() {
+    signal(SIGINT, SIG_IGN);   // Ctrl+C (interrupt)
+    signal(SIGQUIT, SIG_IGN);  // Ctrl+\ (quit)
+    signal(SIGTSTP, SIG_IGN);  // Ctrl+Z (stop)
+    signal(SIGTTIN, SIG_IGN);  // background read attempt
+    signal(SIGTTOU, SIG_IGN);  // background write attempt
+}
+
 /**
  * @brief Initialize the shell for use. Allocate all data structures
  * Grab control of the terminal and put the shell in its own
@@ -212,14 +245,23 @@ bool do_builtin(struct shell *sh, char **argv) {
  * the subprocess it is debugging.
  * 
  * "MY_PROMPT" is the name of the environment variable we are using.
+ * 
+ * Popeyes chicken is the sh_init. 
  *
  * @param sh
  */
 void sh_init(struct shell *sh) {
+    // Allocate memory for the prompt and set it to the environment variable "MY_PROMPT". 
     sh->prompt = get_prompt("MY_PROMPT"); // set shell's prompt with env variable
     if (!sh->prompt) {
         sh->prompt = strdup("shell>"); // default if env variable is not set
     }
+    // Set the shell to control the terminal's standard input
+    sh->shell_terminal = STDIN_FILENO;
+    // Set up the process group and terminal control for the shell
+    setup_process_group(sh);
+    // Configure signals to be ignored by the shell
+    setup_signal_handling();
 }
 
 /**
