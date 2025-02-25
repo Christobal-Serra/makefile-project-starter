@@ -4,11 +4,11 @@
 
 
 void setUp(void) {
-  // set stuff up here
+    setenv("MY_PROMPT", "shell>", 1);
 }
 
 void tearDown(void) {
-  // clean stuff up here
+    unsetenv("MY_PROMPT");
 }
 
 
