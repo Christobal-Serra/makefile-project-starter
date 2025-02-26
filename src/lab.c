@@ -23,6 +23,7 @@
  */
 char *get_prompt(const char *env) {
     const char *prompt = getenv(env); // fetch the environment variable
+    // TODO - malloc
     return strdup(prompt ? prompt : "shell>");
 }
 
@@ -189,6 +190,32 @@ char *trim_white(char *line) {
     return line;
 }
 
+/**
+ * @brief Prints the command history stored by the Readline library.
+ * 
+ * HIST_ENTRY is a data type provided by the GNU Readline library that represents a single command the 
+ * user previously typed into the shell.
+ * 
+ * Blank lines are not saved in the history, so they will not be printed by this function. If there are 
+ * blank lines, they are handled in main.c.
+ * 
+ * Reference:
+ * https://tiswww.cwru.edu/php/chet/readline/history.html
+ */
+void print_history() {
+    // Collect history entries.
+    HIST_ENTRY **history_entries = history_list(); 
+    // If no history entries, print error message.
+    if (!history_entries) {
+        fprintf(stderr, "Command history is empty.\n");
+        return;
+    }
+    // Print history entries.
+    int index = 0;
+    while (history_entries[index]) {
+        printf("%d.) %s\n", index+1, history_entries[index]->line);
+        index++;
+    }
 
 /**
  * @brief Takes an argument list and checks if the first argument is a
@@ -294,6 +321,9 @@ void sh_init(struct shell *sh) {
  */
 void sh_destroy(struct shell *sh) {
     free(sh->prompt); // free the prompt
+    // tcsetattr(sh->shell_terminal, TCSANOW, &sh->shell_tmodes);
+    // TODO - set attributess back to original
+    // TODO - shell code in Tassk 8, Linux library
 }
 
 /**
@@ -330,31 +360,4 @@ void parse_args(int argc, char **argv) {
         }
     }
 }
-
-/**
- * @brief Prints the command history stored by the Readline library.
- * 
- * HIST_ENTRY is a data type provided by the GNU Readline library that represents a single command the 
- * user previously typed into the shell.
- * 
- * Blank lines are not saved in the history, so they will not be printed by this function. If there are 
- * blank lines, they are handled in main.c.
- * 
- * Reference:
- * https://tiswww.cwru.edu/php/chet/readline/history.html
- */
-void print_history() {
-    // Collect history entries.
-    HIST_ENTRY **history_entries = history_list(); 
-    // If no history entries, print error message.
-    if (!history_entries) {
-        fprintf(stderr, "Command history is empty.\n");
-        return;
-    }
-    // Print history entries.
-    int index = 0;
-    while (history_entries[index]) {
-        printf("%d.) %s\n", index+1, history_entries[index]->line);
-        index++;
-    }
 }
