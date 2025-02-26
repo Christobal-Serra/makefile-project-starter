@@ -1,3 +1,8 @@
+/**
+ * @file lab.c
+ * @brief This file contains the implementation of the shell lab.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -8,6 +13,9 @@
 #include <errno.h>
 #include <ctype.h>
 #include <signal.h>
+
+
+  // TODO -- Extra Credit: change fork() to posix_spawn.
 
 #define VALID_OPTIONS "v"  // Defines the valid option(s) for getopt
 
@@ -106,7 +114,7 @@ char **cmd_parse(const char *line) {
         return NULL;
     }
 
-    long arg_max = sysconf(_SC_ARG_MAX);
+    long arg_max = sysconf(_SC_ARG_MAX);  // TODO - man page
     char **args = malloc(arg_max * sizeof(char*)); // TODO: Experiment with calloc?
     if (!args) { // calloc failure
         perror("cmd_parse: malloc failed");
@@ -126,6 +134,7 @@ char **cmd_parse(const char *line) {
     // Parse tokens into args array. Continue while tokens remain and we haven't reached arg_max limit.
     size_t index = 0; // array index and counter, tracking number of args parsed.
     char *current_token = strtok(line_copy, " \t"); // tokenize by spaces and tabs
+    // TODO strtok_r, thread safety
     while ( current_token && (index < (size_t)(arg_max-1)) ) {
         // Copy the current token into the args array and move to the next token.
         args[index++] = strdup(current_token);
@@ -324,6 +333,7 @@ void sh_destroy(struct shell *sh) {
     // tcsetattr(sh->shell_terminal, TCSANOW, &sh->shell_tmodes);
     // TODO - set attributess back to original
     // TODO - shell code in Tassk 8, Linux library
+    // TODO - exit?
 }
 
 /**
